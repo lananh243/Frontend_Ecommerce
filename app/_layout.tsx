@@ -13,7 +13,7 @@ export default function RootLayout() {
     const checkAuth = async () => {
       const token = await AsyncStorage.getItem("userToken");
       if (token) {
-        router.replace("/(tabs)");
+        router.replace("/(drawer)/(tabs)");
       } else {
         router.replace("/account/register");
       }

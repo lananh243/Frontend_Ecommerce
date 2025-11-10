@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { ErrorState, LoginRequest } from "@/types";
 import { useMutation } from "@tanstack/react-query";
 import { loginUser } from "@/services/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
   const [inputValue, setInputValue] = useState<LoginRequest>({
@@ -28,7 +29,11 @@ export default function LoginScreen() {
   const { mutate: loginMutation } = useMutation({
     mutationFn: loginUser,
     mutationKey: ["login"],
-    onSuccess: () => {
+    onSuccess: async (response: any) => {
+      const userData = response?.data;
+      if (userData) {
+        await AsyncStorage.setItem("user", JSON.stringify(userData));
+      }
       Alert.alert("Thành công", "Đăng nhập thành công!");
       router.push("/(tabs)");
     },

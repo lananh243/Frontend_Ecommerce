@@ -1,0 +1,15 @@
+import { Stack } from 'expo-router';
+import React from 'react'
+
+export default function ProfileLayout() {
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      {/* Các màn hình con */}
+      <Stack.Screen name="index" />
+    </Stack>
+  );
+}

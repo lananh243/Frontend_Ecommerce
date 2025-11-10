@@ -10,3 +10,8 @@ export const searchProductName = async (keyword: string) => {
   const response = await axiosInstance.get(`/products/search?keyword=${keyword}`);
   return response.data;
 };
+
+export const detailProduct = async (productId: number) => {
+  const response = await axiosInstance.get(`/products/${productId}`);
+  return response.data;
+}

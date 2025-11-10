@@ -5,8 +5,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60,
-    },
+      cacheTime: 1000 * 60 * 10,
+      staleTime: 1000 * 60 * 5,
+    } as any,
     mutations: {
       retry: 0,
     },

@@ -42,11 +42,29 @@ export type ErrorState = {
 };
 
 export interface ProductResponse {
-  productId: string;
+  productId: number;
   productName?: string;
   description?: string;
-  price?: number | string;
+  price?: string;
   stockQuantity?: number;    
   imageUrl?: string;         
-  categoryName?: string;     
+  categoryName?: string;  
+  sizes?: string[];
+  colors?: string[];   
+}
+
+export interface CartItemType {
+  cartItemId: number;
+  product: ProductResponse;
+  quantity: number;
+  color?: string;
+  size?: string;
+  checked?: boolean;
+}
+
+export interface AddToCartRequest {
+  productId: number;
+  quantity: number;
+  color?: string;
+  size?: string;
 }

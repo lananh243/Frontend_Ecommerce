@@ -49,10 +49,10 @@ export default function RegisterScreen() {
           Alert.alert("Thất bại", "Đã xảy ra lỗi, vui lòng thử lại!");
         }
       } else if (error.request) {
-        console.log("📡 Request gửi đi nhưng không nhận được phản hồi:", error.request);
+        console.log("Request gửi đi nhưng không nhận được phản hồi:", error.request);
         Alert.alert("Lỗi mạng!", "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại server.");
       } else {
-        console.log("⚙️ Lỗi không xác định:", error.message);
+        console.log("Lỗi không xác định:", error.message);
         Alert.alert("Lỗi", error.message || "Lỗi không xác định xảy ra.");
       }
 },

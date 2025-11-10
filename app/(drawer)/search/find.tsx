@@ -1,4 +1,3 @@
-// screens/SearchScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -13,46 +12,75 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // ✅ thêm
 import { searchProductName } from "@/services/product";
 
+const STORAGE_KEY = "recentSearches";
+
 const SearchScreen = () => {
-  const [keyword, setKeyword] = useState(""); // input realtime
-  const [debouncedKeyword, setDebouncedKeyword] = useState(""); 
+  const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  // debounce effect
+  // ✅ Load lịch sử tìm kiếm khi mở lại trang
+  useEffect(() => {
+    const loadHistory = async () => {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) setRecentSearches(JSON.parse(saved));
+    };
+    loadHistory();
+  }, []);
+
+  // ✅ Debounce search keyword
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedKeyword(keyword.trim());
     }, 500);
-
     return () => clearTimeout(handler);
   }, [keyword]);
 
-  // Lưu lịch sử tìm kiếm
+  
+
+  // ✅ Lưu lịch sử tìm kiếm vào AsyncStorage
   useEffect(() => {
     if (debouncedKeyword) {
       setRecentSearches((prev) => {
-        const newHistory = [debouncedKeyword, ...prev.filter((k) => k !== debouncedKeyword)];
-        return newHistory.slice(0, 10); // lưu tối đa 10 item
+        const newHistory = [
+          debouncedKeyword,
+          ...prev.filter((k) => k !== debouncedKeyword),
+        ].slice(0, 10);
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+        return newHistory;
       });
     }
   }, [debouncedKeyword]);
 
-  // Xóa lịch sử
-  const handleClearHistory = () => setRecentSearches([]);
+  // ✅ Xóa toàn bộ lịch sử
+  const handleClearHistory = async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    setRecentSearches([]);
+  };
 
-  // Nhấn vào tag recent search
+  // ✅ Xóa từng item
+  const handleRemoveHistoryItem = async (keyword: string) => {
+    const newHistory = recentSearches.filter((item) => item !== keyword);
+    setRecentSearches(newHistory);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+  };
+
+  // Chọn lại từ khóa cũ để tìm
   const handleSearchSelect = (value: string) => {
     setKeyword(value);
     setDebouncedKeyword(value);
   };
 
-  // Hàm xóa từng item
-const handleRemoveHistoryItem = (keyword: string) => {
-  setRecentSearches((prev) => prev.filter((item) => item !== keyword));
-};
-
+  const handleSearch = () => {
+    if (!keyword.trim()) return;
+    router.push({
+      pathname: "/search/filterProduct",
+      params: { q : keyword}
+    })
+  }
 
   const popularItems = [
     {
@@ -79,10 +107,7 @@ const handleRemoveHistoryItem = (keyword: string) => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchWrapper}>
-          <TouchableOpacity
-            style={styles.searchContainer}
-            onPress={() => router.push("/search/filterProduct")}
-          >
+          <TouchableOpacity style={styles.searchContainer} onPress={() => handleSearch()}>
             <Ionicons name="search-outline" size={18} color="#8C8C8C" />
             <TextInput
               placeholder="Search"
@@ -110,17 +135,14 @@ const handleRemoveHistoryItem = (keyword: string) => {
 
             <View style={styles.tagContainer}>
               {recentSearches.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.tag}
-                  onPress={() => handleSearchSelect(item)}
-                >
-                  <Text style={styles.tagText}>{item}</Text>
+                <View key={index} style={styles.tag}>
+                  <TouchableOpacity onPress={() => handleSearchSelect(item)}>
+                    <Text style={styles.tagText}>{item}</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleRemoveHistoryItem(item)}>
                     <Ionicons name="close-outline" size={16} color="#666" />
                   </TouchableOpacity>
-                
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           </View>
@@ -156,21 +178,9 @@ const handleRemoveHistoryItem = (keyword: string) => {
 export default SearchScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-  },
-  backButton: {
-    marginTop: 8,
-    marginBottom: 6,
-    width: 30,
-  },
-  searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
+  container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
+  backButton: { marginTop: 8, marginBottom: 6, width: 30 },
+  searchWrapper: { flexDirection: "row", alignItems: "center", marginTop: 4 },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
@@ -180,12 +190,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     height: 44,
   },
-  searchInput: {
-    flex: 1,
-    marginLeft: 6,
-    color: "#333",
-    fontSize: 14,
-  },
+  searchInput: { flex: 1, marginLeft: 6, color: "#333", fontSize: 14 },
   filterButton: {
     backgroundColor: "#F9F9F9",
     marginLeft: 10,
@@ -195,19 +200,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  recentSection: {
-    marginTop: 20,
-  },
+  recentSection: { marginTop: 20 },
   recentHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  recentTitle: {
-    fontSize: 15,
-    color: "gray",
-    fontWeight: "500",
-  },
+  recentTitle: { fontSize: 15, color: "gray", fontWeight: "500" },
   tagContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -222,51 +221,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
   },
-  tagText: {
-    color: "#333",
-    fontSize: 13,
-    marginRight: 4,
-  },
-  popularSection: {
-    marginTop: 30,
-  },
+  tagText: { color: "#333", fontSize: 13, marginRight: 4 },
+  popularSection: { marginTop: 30 },
   popularHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 30
+    marginTop: 30,
   },
-  popularTitle: {
-    fontWeight: "700",
-    fontSize: 16,
-    color: "#000",
-  },
-  showAll: {
-    color: "#555",
-    fontSize: 13,
-  },
+  popularTitle: { fontWeight: "700", fontSize: 16, color: "#000" },
+  showAll: { color: "#555", fontSize: 13 },
   productContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 30,
   },
-  productCard: {
-    width: "45%",
-  },
+  productCard: { width: "45%" },
   productImage: {
     width: "100%",
     height: 190,
     borderRadius: 12,
     resizeMode: "cover",
   },
-  productName: {
-    fontSize: 14,
-    color: "#333",
-    marginTop: 8,
-  },
-  productPrice: {
-    fontWeight: "600",
-    marginTop: 5,
-    color: "#000",
-  },
+  productName: { fontSize: 14, color: "#333", marginTop: 8 },
+  productPrice: { fontWeight: "600", marginTop: 5, color: "#000" },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CategorySection from "@/components/CategorySection";
@@ -9,8 +9,16 @@ import TopCollectionSection from "@/components/TopCollectionSection";
 import BannerCarousel from "@/components/BannerCarousel";
 import { getAllProduct } from "@/services/product";
 import { useQuery } from "@tanstack/react-query";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { DrawerNavigationProp } from "@react-navigation/drawer";
+
+type RootDrawerParamList = {
+  Homepage: undefined;
+  Discover: undefined;
+};
 
 const HomeScreen = () => {
+  const navigation = useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
 
   const { data: products, isLoading, isError } = useQuery({
     queryKey: ["products"],
@@ -39,7 +47,9 @@ const HomeScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* 🔹 Header */}
       <View style={styles.header}>
-        <Ionicons name="menu" size={24} color="black" />
+        <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
+          <Ionicons name="menu" size={26} color="black" />
+        </TouchableOpacity>
         <Text style={styles.logo}>GemStore</Text>
         <Ionicons name="notifications-outline" size={24} color="black" />
       </View>

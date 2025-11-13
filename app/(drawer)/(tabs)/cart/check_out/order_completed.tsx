@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,22 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 const OrderCompletedScreen = () => {
+//   useEffect(() => {
+//   const timer = setTimeout(() => {
+//     router.replace("/cart");
+//   }, 1000);
+
+//   return () => clearTimeout(timer);
+// }, []);
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Check out</Text>
@@ -21,12 +29,12 @@ const OrderCompletedScreen = () => {
       </View>
 
       {/* Step indicator */}
-      <View style={styles.stepWrapper}>
-        <Ionicons name="location-outline" size={20} color="#999" />
-        <Ionicons name="remove-outline" size={22} color="#999" />
-        <Ionicons name="card-outline" size={20} color="#999" />
-        <Ionicons name="remove-outline" size={22} color="#999" />
-        <Ionicons name="checkmark-circle-outline" size={22} color="#000" />
+      <View style={styles.progressContainer}>
+        <FontAwesome6 name="location-dot" size={24} color="black" />
+        <View style={styles.progressLine} />
+        <MaterialIcons name="payment" size={24} color="black" />
+        <View style={styles.progressLine} />
+        <Ionicons name="checkmark-circle" size={24} color="black" />
       </View>
 
       {/* Content */}
@@ -46,7 +54,7 @@ const OrderCompletedScreen = () => {
       </View>
 
       {/* Button */}
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={() => router.replace("/")}>
         <Text style={styles.buttonText}>Continue shopping</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -103,5 +111,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
     fontSize: 15,
+  },
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  progressLine: {
+    width: 80,
+    height: 1.5,
+    backgroundColor: "#ccc",
+    marginHorizontal: 6,
   },
 });

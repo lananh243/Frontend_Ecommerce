@@ -2,8 +2,11 @@ import { useEffect, useState } from "react"
 import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native"
 import { ChevronLeft, Heart, ChevronDown } from "lucide-react-native"
 import { router } from "expo-router"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { detailProduct } from "@/services/product"
+import { getWishlist } from "@/services/wishlist"
+import { Ionicons } from "@expo/vector-icons"
+import { useWishlist } from "@/app/hooks/useWishlist"
 
 type ProductDetailProps = {
   productId: number;
@@ -12,18 +15,36 @@ type ProductDetailProps = {
 }
 
 export default function ProductDetail({
-  productId, 
+  productId,
   onColorChange,
-  onSizeChange}: ProductDetailProps) {
-  const [descriptionOpen, setDescriptionOpen] = useState(false)  
-  
+  onSizeChange }: ProductDetailProps) {
+
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+
+  const { wishlist, addToWishlist, removeFromWishlist, isAdding } = useWishlist();
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  useEffect(() => {
+    const exists = wishlist?.some((item: any) => item.productId === productId);
+    setIsWishlisted(exists);
+  }, [wishlist, productId]);
+
+
+  const toggleWishlist = () => {
+    if (isWishlisted) {
+      removeFromWishlist(productId);
+    } else {
+      addToWishlist(productId);
+    }
+  };
+
   // Chi tiết sản phẩm
-  const {data: product, isLoading, isError} = useQuery({
+  const { data: product, isLoading, isError } = useQuery({
     queryKey: ["product-detail", productId],
     queryFn: () => detailProduct(Number(productId)),
     enabled: !!productId,
   });
-  
+
   const sizes = ["S", "M", "L"];
 
   const colors = [
@@ -72,15 +93,21 @@ export default function ProductDetail({
         <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
           <ChevronLeft size={24} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <Heart size={24} color="#000" />
+        <TouchableOpacity style={styles.navButton}
+          onPress={toggleWishlist} disabled={isAdding}
+        >
+          <Ionicons
+            name={isWishlisted ? "heart" : "heart-outline"}
+            size={28}
+            color={isWishlisted ? "red" : "gray"}
+          />
         </TouchableOpacity>
       </View>
 
       {/* Product Image */}
       <View style={styles.productImage}>
         <Image
-          source={{ uri: product.data.imageUrl}}
+          source={{ uri: product.data.imageUrl }}
           style={styles.img}
         />
       </View>
@@ -93,22 +120,22 @@ export default function ProductDetail({
 
       {/* Product Title and Price */}
       <View style={styles.priceRating}>
-          <Text style={styles.title}>{product.data.productName}</Text>
-          <Text style={styles.price}>
-            {product.data.price.toLocaleString("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            })}
-          </Text>
+        <Text style={styles.title}>{product.data.productName}</Text>
+        <Text style={styles.price}>
+          {product.data.price.toLocaleString("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          })}
+        </Text>
       </View>
-      
+
       <View style={styles.ratingContainer}>
-          {[...Array(5)].map((_, i) => (
-            <Text key={i} style={styles.star}>
-              ★
-            </Text>
-          ))}
-          <Text style={styles.ratingCount}>(63)</Text>
+        {[...Array(5)].map((_, i) => (
+          <Text key={i} style={styles.star}>
+            ★
+          </Text>
+        ))}
+        <Text style={styles.ratingCount}>(63)</Text>
       </View>
 
       <View style={styles.sizeContainer}>
@@ -120,27 +147,27 @@ export default function ProductDetail({
               const isAvailable = product.data.colors?.some(
                 (c: string) => c.toLowerCase() === color.name
               );
-            return (
-              <TouchableOpacity
-                key={color.name}
-                onPress={() => {
-                  if (isAvailable) {
-                    setSelectedColor(color.name)
-                    onColorChange?.(color.name)
-                  }
-                }}
-                style={[
-                  styles.colorButton,
-                  {
-                    backgroundColor: color.hex,
-                    borderColor: selectedColor === color.name ? "#0A5FCC" : "#CCCCCC",
-                    borderWidth: 2,
-                    transform: selectedColor === color.name ? [{ scale: 1.1 }] : [{ scale: 1 }],
-                    opacity: isAvailable ? 1 : 0.3,
-                  },
-                ]}
-              />
-            );
+              return (
+                <TouchableOpacity
+                  key={color.name}
+                  onPress={() => {
+                    if (isAvailable) {
+                      setSelectedColor(color.name)
+                      onColorChange?.(color.name)
+                    }
+                  }}
+                  style={[
+                    styles.colorButton,
+                    {
+                      backgroundColor: color.hex,
+                      borderColor: selectedColor === color.name ? "#0A5FCC" : "#CCCCCC",
+                      borderWidth: 2,
+                      transform: selectedColor === color.name ? [{ scale: 1.1 }] : [{ scale: 1 }],
+                      opacity: isAvailable ? 1 : 0.3,
+                    },
+                  ]}
+                />
+              );
             })}
 
           </View>
@@ -154,33 +181,33 @@ export default function ProductDetail({
               const isAvailable = product.data.sizes?.includes(size);
               return (
                 <TouchableOpacity
-                key={size}
-                onPress={() => {
-                  if (isAvailable) {
-                    setSelectedSize(size);
-                    onSizeChange?.(size)
-                  }
-                }}
-                style={[
-                  styles.sizeButton,
-                  {
-                    borderColor: selectedSize === size ? "#515151" : "#CCCCCC",
-                    backgroundColor: selectedSize === size ? "#515151" : "transparent",
-                    opacity: isAvailable ? 1 : 0.2,
-                  },
-                ]}
-              >
-                <Text
+                  key={size}
+                  onPress={() => {
+                    if (isAvailable) {
+                      setSelectedSize(size);
+                      onSizeChange?.(size)
+                    }
+                  }}
                   style={[
-                    styles.sizeButtonText,
+                    styles.sizeButton,
                     {
-                      color: selectedSize === size ? "#FFFFFF" : "#333333",
+                      borderColor: selectedSize === size ? "#515151" : "#CCCCCC",
+                      backgroundColor: selectedSize === size ? "#515151" : "transparent",
+                      opacity: isAvailable ? 1 : 0.2,
                     },
                   ]}
                 >
-                  {size}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.sizeButtonText,
+                      {
+                        color: selectedSize === size ? "#FFFFFF" : "#333333",
+                      },
+                    ]}
+                  >
+                    {size}
+                  </Text>
+                </TouchableOpacity>
               )
             })}
           </View>

@@ -10,7 +10,7 @@ export const addToCart = async (userId: number, cartItem: AddToCartRequest) => {
     }
 }
 
-export const getAllCart = async (userId: number) => {
+export const getCartById = async (userId: number) => {
     const response = await axiosInstance.get(`/carts/${userId}`);    
     return response.data;
 }
@@ -29,5 +29,11 @@ export const deleteCartItemId = async (cartItemId: number) => {
 
 export const clearCart = async (userId: number) => {
     const response = await axiosInstance.delete(`/carts/${userId}/clear`);
+    return response.data;
+}
+
+
+export const clearAfterPayment = async () => {
+    const response = await axiosInstance.delete(`/carts/clear-after-payment`);
     return response.data;
 }

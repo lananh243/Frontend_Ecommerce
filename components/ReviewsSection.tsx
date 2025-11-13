@@ -1,9 +1,64 @@
 import { useState } from "react"
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native"
+import { View, Text, TouchableOpacity, Image, StyleSheet, Button, Modal, TextInput, Alert } from "react-native"
 import { ChevronDown } from "lucide-react-native"
+import { useLocalSearchParams } from "expo-router"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { comment, getAllComment } from "@/services/comment"
 
 export default function ReviewsSection() {
   const [reviewsOpen, setReviewsOpen] = useState(true)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [reviewText, setReviewText] = useState("");
+  const [rating, setRating] = useState(0);
+  const queryClient = useQueryClient();
+  const { id } = useLocalSearchParams();
+
+  // Lấy tất cả comment
+  const { data: reviewsData, isLoading, refetch } = useQuery({
+    queryKey: ["reviews", id],
+    queryFn: () => getAllComment(Number(id))
+  })
+
+
+  // API gui review
+  const { mutate: addComment, isPending } = useMutation({
+    mutationFn: comment,
+    onSuccess: (res) => {
+      Alert.alert("Thành công", "Đánh giá của bạn đã được gửi!")
+      queryClient.invalidateQueries({ queryKey: ["reviews", id] });
+      setModalVisible(false)
+      setReviewText("")
+      setRating(0)
+    },
+    onError: (err: any) => {
+      Alert.alert("Lỗi", err?.response?.data?.message || "Không thể gửi đánh giá")
+    },
+  })
+
+  const handleSubmitReview = () => {
+    if (!reviewText.trim() || rating === 0) {
+      Alert.alert("Thông báo", "Vui lòng nhập nội dung và chọn số sao.")
+      return
+    }
+
+    addComment({
+      productId: Number(id),
+      rating,
+      comment: reviewText,
+    })
+  }
+
+  {/* Tính toán từ reviewsData */ }
+  const totalReviews = reviewsData?.data?.length || 0;
+  const totalStars = reviewsData?.data?.reduce((sum: number, review: any) => sum + review.rating, 0) || 0;
+  const averageRating = totalReviews ? (totalStars / totalReviews).toFixed(1) : "0";
+
+  // Tính phần trăm cho mỗi mức sao
+  const ratingDistribution = [5, 4, 3, 2, 1].map((star) => {
+    const count = reviewsData?.data?.filter((r: any) => r.rating === star).length || 0;
+    const percentage = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
+    return { stars: star, count, percentage };
+  })
 
   const ratingData = [
     { stars: 5, percentage: 80, count: 42 },
@@ -50,43 +105,41 @@ export default function ReviewsSection() {
           {/* Rating Summary */}
           <View style={styles.ratingSection}>
             <View style={styles.ratingHeader}>
-                {/* Overall Rating */}
-                <View style={styles.ratingScore}>
-                    <Text style={styles.ratingNumber}>4.9</Text>
-                    <Text style={styles.ratingLabel}>OUT OF 5</Text>
-                </View>
+              {/* Overall Rating */}
+              <View style={styles.ratingScore}>
+                <Text style={styles.ratingNumber}>{averageRating}</Text>
+                <Text style={styles.ratingLabel}>OUT OF 5</Text>
+              </View>
 
-                {/* Rating and review count */}
-                <View style={styles.starsRow}>
-                {[...Array(5)].map((_, i) => (
-                    <Text key={i} style={styles.star}>
-                    ★
-                    </Text>
+              {/* Stars and review count */}
+              <View style={styles.starsRow}>
+                {[...Array(Math.round(Number(averageRating)))].map((_, i) => (
+                  <Text key={i} style={styles.star}>★</Text>
                 ))}
-                <Text style={styles.ratingCount}>63 ratings</Text>
-                </View>
+                <Text style={styles.ratingCount}>{totalReviews} ratings</Text>
+              </View>
             </View>
-            
+
             {/* Rating Distribution */}
             <View style={styles.distributionContainer}>
-                {ratingData.map((item) => (
-                    <View key={item.stars} style={styles.distributionRow}>
-                    <View style={styles.starLabel}>
-                        <Text style={styles.star}>★</Text>
-                        <Text>{item.stars}</Text>
-                    </View>
-                    <View style={styles.barContainer}>
-                        <View style={[styles.bar, { width: `${item.percentage}%` }]} />
-                    </View>
-                    <Text style={styles.percentage}>{item.percentage}%</Text>
-                    </View>
-                ))}
+              {ratingDistribution.map((item) => (
+                <View key={item.stars} style={styles.distributionRow}>
+                  <View style={styles.starLabel}>
+                    <Text style={styles.star}>★</Text>
+                    <Text>{item.stars}</Text>
+                  </View>
+                  <View style={styles.barContainer}>
+                    <View style={[styles.bar, { width: `${item.percentage}%` }]} />
+                  </View>
+                  <Text style={styles.percentage}>{item.percentage}%</Text>
+                </View>
+              ))}
             </View>
 
             {/* Write Review Button */}
             <View style={styles.reviewActions}>
-              <Text style={styles.reviewCount}>57 Reviews</Text>
-              <TouchableOpacity style={styles.writeReview}>
+              <Text style={styles.reviewCount}>{reviewsData?.data?.length || 0} Reviews</Text>
+              <TouchableOpacity style={styles.writeReview} onPress={() => setModalVisible(true)}>
                 <Text style={styles.writeReviewText}>✎ WRITE A REVIEW</Text>
               </TouchableOpacity>
             </View>
@@ -94,14 +147,14 @@ export default function ReviewsSection() {
 
           {/* Reviews List */}
           <View style={styles.reviewsList}>
-            {reviews.map((review) => (
-              <View key={review.id} style={styles.reviewItem}>
+            {reviewsData?.data?.map((review: any) => (
+              <View key={review.reviewId} style={styles.reviewItem}>
                 <View style={styles.reviewHeader}>
-                  <Image source={{ uri: review.avatar }} style={styles.reviewAvatar} />
+                  <Image source={{ uri: review.userAvatar }} style={styles.reviewAvatar} />
                   <View style={styles.reviewContent}>
                     <View style={styles.reviewTitle}>
-                      <Text style={styles.reviewAuthor}>{review.author}</Text>
-                      <Text style={styles.reviewTime}>{review.timeAgo}</Text>
+                      <Text style={styles.reviewAuthor}>{review.userName}</Text>
+                      <Text style={styles.reviewTime}>{new Date(review.createdAt).toLocaleDateString()}</Text>
                     </View>
                     <View style={styles.reviewRating}>
                       {[...Array(review.rating)].map((_, i) => (
@@ -110,7 +163,7 @@ export default function ReviewsSection() {
                         </Text>
                       ))}
                     </View>
-                    <Text style={styles.reviewText}>{review.text}</Text>
+                    <Text style={styles.reviewText}>{review.comment}</Text>
                   </View>
                 </View>
               </View>
@@ -118,7 +171,49 @@ export default function ReviewsSection() {
           </View>
         </>
       )}
+      {/* Modal nhập bình luận */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Write a Review</Text>
+
+            {/* Rating stars */}
+            <View style={styles.starSelectContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                  <Text style={[styles.starIcon, { color: star <= rating ? "#FFD700" : "#CCCCCC" }]}>
+                    ★
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Review input */}
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Write your review here..."
+              multiline
+              value={reviewText}
+              onChangeText={setReviewText}
+            />
+
+            {/* Buttons */}
+            <View style={styles.modalButtons}>
+              <Button title="Cancel" color="gray" onPress={() => setModalVisible(false)} />
+              <Button title={isPending ? "Submitting..." : "Submit"} onPress={handleSubmitReview} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
+
+
   )
 }
 
@@ -147,10 +242,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   ratingHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between", 
-},
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   ratingRow: {
     flexDirection: "row",
     gap: 16,
@@ -281,4 +376,40 @@ const styles = StyleSheet.create({
     color: "#555555",
     lineHeight: 21,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    width: "85%",
+  },
+  modalTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    height: 100,
+    padding: 10,
+    marginBottom: 10,
+    textAlignVertical: "top",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  starSelectContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  starIcon: {
+    fontSize: 28,
+    marginHorizontal: 4,
+  },
+
 })

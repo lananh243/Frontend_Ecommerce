@@ -13,7 +13,8 @@ export enum Gender {
 }
 
 export interface RegisterRequest {
-  username: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   password: string;
   confirmPassword: string
@@ -35,7 +36,8 @@ export interface LoginResponse {
 }
 
 export type ErrorState = {
-  username?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
@@ -67,4 +69,64 @@ export interface AddToCartRequest {
   quantity: number;
   color?: string;
   size?: string;
+}
+
+export interface OrderItemRequest {
+  productId: number;
+  quantity: number;
+  color?: string; // optional
+  size?: string;  // optional
+}
+
+export interface OrderItemResponse {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  price: number; // VND
+  color?: string;
+  size?: string;
+}
+
+export interface OrderRequest {
+  firstName: string;
+  lastName: string;
+  street: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip: string;
+  phone: string;
+  shippingMethod: "free" | "normal" | "fast";
+  shippingPrice?: number; 
+  orderItems: OrderItemRequest[];
+  couponCode?: string;
+}
+
+export interface ErrorOrder {
+  firstName: string;
+  lastName: string;
+  street: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip: string;
+  phone: string;
+  shippingMethod: "free" | "normal" | "fast";
+  shippingPrice?: number; 
+  orderItems: OrderItemRequest[];
+  couponCode?: string;
+}
+
+
+export interface OrderResponse {
+  id: number;
+  userId: number;
+  orderStatus: "PENDING" | "DELIVERED" | "CANCELLED";
+  shippingAddress: string;
+  shippingMethod: string;
+  shippingPrice: number;
+  totalPrice: number; // VND
+  createdAt: string;  // ISO string
+  orderItems: OrderItemResponse[];
 }

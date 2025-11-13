@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, FlatList, StyleSheet } from "react-native";
 import ProductCard from "./ProductCard";
 import { ProductResponse } from "@/types";
+import { router } from "expo-router";
 
 interface ProductSectionProps {
   title: string;
@@ -20,7 +21,7 @@ export default function ProductSection({
     <View style={{ marginBottom: 10 }}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.showAll}>Show all</Text>
+        <Text style={styles.showAll} onPress={() => router.push("/all_products")}>Show all</Text>
       </View>
 
       <FlatList
@@ -28,7 +29,7 @@ export default function ProductSection({
         horizontal={horizontal}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.productId.toString()}
-        renderItem={({ item }) => <ProductCard item={item} variant={cardStyle} />}
+        renderItem={({ item }) => <ProductCard item={item} variant={cardStyle} onPress={() => router.push(`/search/${item.productId}`)}/>}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Không có sản phẩm nào</Text>

@@ -1,9 +1,15 @@
-import { Tabs } from "expo-router";
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarShowLabel: false}}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: "black",
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -12,7 +18,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="search"
         options={{
@@ -21,7 +26,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="cart"
         options={{
@@ -30,7 +34,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="profile"
         options={{

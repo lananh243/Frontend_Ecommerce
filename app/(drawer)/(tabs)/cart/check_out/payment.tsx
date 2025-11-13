@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,92 @@ import {
   ScrollView,
   StyleSheet,
   Image,
-  Switch,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Checkbox from "expo-checkbox";
 import { router } from "expo-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getOrderLastest } from "@/services/order";
+import { ActivityIndicator } from "react-native-paper";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearAfterPayment, clearCart } from "@/services/cart";
 
 const PaymentScreen = () => {
   const [method, setMethod] = useState("card");
   const [agree, setAgree] = useState(false);
+
+  const [user, setUser] = useState<{ userId: number; email: string } | null>(
+    null
+  );
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userData = await AsyncStorage.getItem("userInfo");
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        setUser({ userId: parsed.userId, email: parsed.email });
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["latestOrder", user?.email],
+    queryFn: () => getOrderLastest(user?.email ?? ""),
+    enabled: !!user?.email,
+  });
+
+  // 🔹 Mutation để clear cart sau thanh toán
+  const clearCartMutation = useMutation({
+    mutationFn: () => clearCart(user?.userId ?? 0),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart-item", user?.userId] });
+      // Chuyển đến trang order completed
+      router.push("/cart/check_out/order_completed");
+
+    },
+    onError: (error: any) => {
+      Alert.alert("Lỗi", "Không thể xóa giỏ hàng. Vui lòng thử lại.");
+    },
+  });
+
+  // 🔹 Xử lý khi nhấn "Place my order"
+  const handlePlaceOrder = () => {
+    if (!agree) {
+      Alert.alert("Thông báo", "Vui lòng đồng ý với điều khoản và điều kiện");
+      return;
+    }
+    if (!user) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin người dùng.");
+      return;
+    }
+
+    // Gọi API xóa giỏ hàng
+    clearCartMutation.mutate();
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text>Loading latest order...</Text>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.center}>
+        <Text>Error: {(error as any).message}</Text>
+        <Text onPress={() => refetch()} style={{ color: "blue", marginTop: 8 }}>
+          Try again
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,19 +104,19 @@ const PaymentScreen = () => {
         <View style={{ width: 22 }} />
       </View>
 
+      {/* Progress indicator */}
+      <View style={styles.progressContainer}>
+        <FontAwesome6 name="location-dot" size={24} color="black" />
+        <View style={styles.progressLine} />
+        <MaterialIcons name="payment" size={24} color="black" />
+        <View style={styles.progressLine} />
+        <Ionicons name="checkmark-circle" size={24} color="#ccc" />
+      </View>
+
+      <Text style={styles.stepText}>STEP 2</Text>
+      <Text style={styles.title}>Payment</Text>
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Step indicator */}
-        <View style={styles.stepWrapper}>
-          <Ionicons name="location-outline" size={20} color="#999" />
-          <Ionicons name="remove-outline" size={22} color="#999" />
-          <Ionicons name="card-outline" size={20} color="#000" />
-          <Ionicons name="remove-outline" size={22} color="#999" />
-          <Ionicons name="checkmark-done-outline" size={20} color="#ccc" />
-        </View>
-
-        <Text style={styles.stepText}>STEP 2</Text>
-        <Text style={styles.title}>Payment</Text>
-
         {/* Payment method buttons */}
         <View style={styles.methodRow}>
           <TouchableOpacity
@@ -107,46 +183,67 @@ const PaymentScreen = () => {
           or check out with
         </Text>
         <View style={styles.payIcons}>
-            {[
-                "https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg",
-                "https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png",
-                "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg",
-                "https://upload.wikimedia.org/wikipedia/commons/2/2d/Alipay_logo.svg",
-                "https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo_%282018%29.svg",
-            ].map((url, i) => (
-                <Image
-                key={i}
-                source={{ uri: url }}
-                style={{
-                    width: 50,
-                    height: 30,
-                    resizeMode: "contain",
-                }}
-                />
-            ))}
+          {[
+            "https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg",
+            "https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png",
+            "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg",
+            "https://upload.wikimedia.org/wikipedia/commons/2/2d/Alipay_logo.svg",
+            "https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo_%282018%29.svg",
+          ].map((url, i) => (
+            <Image
+              key={i}
+              source={{ uri: url }}
+              style={{
+                width: 50,
+                height: 30,
+                resizeMode: "contain",
+              }}
+            />
+          ))}
         </View>
-
 
         {/* Price summary */}
-        <View style={styles.summaryBox}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Product price</Text>
-            <Text style={styles.summaryValue}>$110</Text>
+        {data?.data ? (
+          <View style={styles.summaryBox}>
+            <View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Product price</Text>
+                <Text style={styles.summaryValue}>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(data.data.totalPrice)}
+                </Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Shipping</Text>
+                <Text style={styles.summaryValue}>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(Number(data.data.shippingFee))}
+                </Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>
+                  Subtotal
+                </Text>
+                <Text style={[styles.summaryValue, { fontWeight: "700" }]}>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(data.data.subtotal)}
+                </Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValue}>Freeship</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>
-              Subtotal
-            </Text>
-            <Text style={[styles.summaryValue, { fontWeight: "700" }]}>
-              $110
-            </Text>
-          </View>
-        </View>
+        ) : (
+          <Text>Loading order summary...</Text>
+        )}
 
         {/* Terms */}
         <View style={styles.termsRow}>
@@ -165,8 +262,19 @@ const PaymentScreen = () => {
         </View>
 
         {/* Place order */}
-        <TouchableOpacity style={styles.placeBtn} onPress={() => router.push("/cart/order_completed")}>
-          <Text style={styles.placeText}>Place my order</Text>
+        <TouchableOpacity
+          style={[
+            styles.placeBtn,
+            clearCartMutation.isPending && { opacity: 0.6 },
+          ]}
+          onPress={handlePlaceOrder}
+          disabled={clearCartMutation.isPending}
+        >
+          {clearCartMutation.isPending ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.placeText}>Place my order</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -177,6 +285,7 @@ export default PaymentScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -196,7 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#555",
     marginHorizontal: 16,
-    marginTop: 6,
+    marginTop: 20,
   },
   title: {
     fontSize: 20,
@@ -321,5 +430,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "600",
+  },
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  progressLine: {
+    width: 80,
+    height: 1.5,
+    backgroundColor: "#ccc",
+    marginHorizontal: 6,
   },
 });

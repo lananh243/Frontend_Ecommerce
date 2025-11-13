@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react"
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from "react-native"
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator } from "react-native"
 import { ChevronDown, ShoppingBag } from "lucide-react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addToCart } from "@/services/cart";
-import { getAllProduct } from "@/services/product";
-import { AddToCartRequest, CartItemType } from "@/types";
+import { getAllProduct, getProductsByCategory } from "@/services/product";
+import { AddToCartRequest, CartItemType, ProductResponse } from "@/types";
 
 type SimilarProductsProps = {
   currentProductId?: number;
+  categoryId?: number;
   selectedColor?: string;
   selectedSize?: string;
 };
 
 
-export default function SimilarProducts({ 
+export default function SimilarProducts({
   currentProductId,
+  categoryId,
   selectedColor = "default",
   selectedSize = "default" }: SimilarProductsProps) {
   const [userId, setUserId] = useState<number>(0);
@@ -24,7 +26,7 @@ export default function SimilarProducts({
   // Lấy userId từ AsyncStorage
   useEffect(() => {
     const fetchUser = async () => {
-      const userData = await AsyncStorage.getItem("user");
+      const userData = await AsyncStorage.getItem("userInfo");
       if (userData) {
         const user = JSON.parse(userData);
         setUserId(user.userId);
@@ -42,8 +44,8 @@ export default function SimilarProducts({
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.message || 
-        error?.message ||                
+        error?.response?.data?.message ||
+        error?.message ||
         "Không thể thêm vào giỏ hàng";
       Alert.alert("Lỗi", message);
     },
@@ -59,49 +61,46 @@ export default function SimilarProducts({
 
   const [productsOpen, setProductsOpen] = useState(true)
 
-  const products1 = [
-    {
-      id: 1,
-      name: "Rise Crop Hoodie",
-      price: "$43.00",
-      image: "https://images.unsplash.com/photo-1556821552-7f41c5d440db?w=300&h=300&fit=crop",
-      rating: 5,
-    },
-    {
-      id: 2,
-      name: "Gym Crop Top",
-      price: "$39.99",
-      image: "https://images.unsplash.com/photo-1506259926000-85c91f8a66a6?w=300&h=300&fit=crop",
-      rating: 5,
-    },
-    {
-      id: 3,
-      name: "Sport Sweatshirt",
-      price: "$47.99",
-      image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-      rating: 5,
-    },
-    {
-      id: 4,
-      name: "Active Tank",
-      price: "$35.00",
-      image: "https://images.unsplash.com/photo-1506629082632-250e5c4d64d7?w=300&h=300&fit=crop",
-      rating: 5,
-    },
-  ]
+  // lấy sản phẩm theo danh mục
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["similar-products", categoryId],
+    queryFn: () => getProductsByCategory(categoryId!),
+    enabled: !!categoryId,
+  })
+
+
+  console.log("aaaaaaaaaaa", products);
+
+
 
   const ProductCard = ({ product }: { product: any }) => (
     <TouchableOpacity style={styles.productCard}>
       <View style={styles.productImage}>
-        <Image source={{ uri: product.image }} style={styles.img} />
+        <Image source={{ uri: product.imageUrl }} style={styles.img} />
       </View>
       <Text style={styles.productName} numberOfLines={2}>
-        {product.name}
+        {product.productName}
       </Text>
-      <Text style={styles.productPrice}>{product.price}</Text>
+      <Text style={styles.productPrice}>
+        {product.price.toLocaleString("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        })}</Text>
 
     </TouchableOpacity>
   )
+
+  if (isLoading)
+    return (
+      <View style={{ padding: 20, alignItems: "center" }}>
+        <ActivityIndicator size="small" color="#000" />
+      </View>
+    );
+
+  // 🔸 Loại bỏ chính sản phẩm đang xem
+  const filteredProducts = products.filter(
+    (p: any) => p.productId !== currentProductId
+  );
 
   return (
     <View style={styles.container}>
@@ -119,14 +118,20 @@ export default function SimilarProducts({
 
         {productsOpen && (
           <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContainer}
-                >
-                {products1.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                ))}
-            </ScrollView>
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContainer}
+          >
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product: ProductResponse) => (
+                <ProductCard key={product.productId} product={product} />
+              ))
+            ) : (
+              <Text style={{ color: "#888", paddingHorizontal: 16 }}>
+                Không có sản phẩm tương tự
+              </Text>
+            )}
+          </ScrollView>
 
         )}
       </View>
@@ -134,14 +139,14 @@ export default function SimilarProducts({
       {/* Fixed Add to Cart Button */}
       {currentProductId && (
         <View style={styles.fixedButton}>
-          <TouchableOpacity style={styles.addToCartButton} 
+          <TouchableOpacity style={styles.addToCartButton}
             onPress={() => handleAddToCart(currentProductId)}>
             <ShoppingBag size={20} color="#FFFFFF" />
             <Text style={styles.addToCartText}>Add To Cart</Text>
           </TouchableOpacity>
         </View>
       )}
-      
+
     </View>
   )
 }
@@ -176,7 +181,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   productCard: {
-    width: 120, 
+    width: 120,
     marginRight: 16,
   },
   productImage: {
@@ -190,7 +195,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingVertical: 24,
     paddingHorizontal: 4,
-    },
+  },
   img: {
     width: "100%",
     height: "100%",

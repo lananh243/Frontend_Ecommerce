@@ -1,25 +1,24 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { Alert } from "react-native";
 
 const axiosInstance = axios.create({
-  baseURL: "http://192.168.100.202:8080/api/v1",
+  baseURL: "http://192.168.2.3:8080/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 10000,
 });
 
-// // Request interceptor: gắn token cố định
-// axiosInstance.interceptors.request.use(
-//   (config) => {
-//     const accessToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJodXllbkBnbWFpbC5jb20iLCJpYXQiOjE3NjIzNjE3ODYsImV4cCI6MTc2MjQ0ODE4Nn0.UrBC3LzD3a3WWuOVffHaFNXB--ATCYqgIEmlW81YXagu3RxCYB20PI0zpOClk-exnLSfyNChJXH76rJngTRYjg"; // token cứng
-//     if (accessToken) {
-//       config.headers["Authorization"] = `Bearer ${accessToken}`;
-//     }
-//     return config;
-//   },
-//   (error) => Promise.reject(error)
-// );
+
+axiosInstance.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem("userToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+
 
 // // Response interceptor: bắt lỗi
 // axiosInstance.interceptors.response.use(

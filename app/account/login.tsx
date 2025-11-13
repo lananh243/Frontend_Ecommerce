@@ -11,11 +11,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ErrorState, LoginRequest } from "@/types";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { loginUser } from "@/services/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
+  const queryClient = useQueryClient();
   const [inputValue, setInputValue] = useState<LoginRequest>({
     email: "",
     password: "",
@@ -29,16 +30,25 @@ export default function LoginScreen() {
   const { mutate: loginMutation } = useMutation({
     mutationFn: loginUser,
     mutationKey: ["login"],
-    onSuccess: async (response: any) => {
-      const userData = response?.data;
-      if (userData) {
-        await AsyncStorage.setItem("user", JSON.stringify(userData));
+    onSuccess: async ({ data }: any) => {
+      const { accessToken, ...user } = data;
+      // Lưu song song token và user, chỉ khi có token hợp lệ
+      if (accessToken) {
+        await Promise.all([
+          AsyncStorage.setItem("userToken", accessToken),
+          AsyncStorage.setItem("userInfo", JSON.stringify(user)),
+        ]);
+
+        // Làm mới cache để Profile tự refetch
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+
+        Alert.alert("Thành công", "Đăng nhập thành công!");
+        router.replace("/(drawer)/(tabs)");
+      } else {
+        Alert.alert("Lỗi", "Không nhận được token đăng nhập!");
       }
-      Alert.alert("Thành công", "Đăng nhập thành công!");
-      router.push("/(tabs)");
     },
     onError: (error: any) => {
-
       if (error.response && error.response.data) {
         const responseData = error.response.data;
 

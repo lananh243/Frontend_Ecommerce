@@ -5,18 +5,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ErrorState, RegisterRequest, User } from "@/types";
 import { registerUser } from "@/services/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const [inputValue, setInputValue] = useState<RegisterRequest>({
-    username: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
   })
 
   const [errors, setErrors] = useState<ErrorState>({
-    username: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -27,10 +30,15 @@ export default function RegisterScreen() {
   } = useMutation({
     mutationFn: registerUser,
     mutationKey: ["register"],
-    onSuccess: () => {
-      Alert.alert("Thành công", "Đăng ký thành công!");
-      router.push("/account/login")
-    },
+    onSuccess: async (response: any) => {
+  const token = response?.data?.accessToken;
+  const user = response?.data; // hoặc response?.user
+  if (token) await AsyncStorage.setItem("userToken", token);
+  if (user) await AsyncStorage.setItem("userInfo", JSON.stringify(user));
+
+  Alert.alert("Thành công", "Đăng ký thành công!");
+  router.push("/account/login"); // có thể chuyển thẳng vào app nếu muốn auto-login
+},
     onError: (error: any) => {
 
       if (error.response && error.response.data) {
@@ -38,7 +46,8 @@ export default function RegisterScreen() {
 
         if (responseData.errors) {
           setErrors({
-            username: responseData.errors.username || "",
+            firstName: responseData.errors.firstName || "",
+            lastName: responseData.errors.lastName || "",
             email: responseData.errors.email || "",
             password: responseData.errors.password || "",
             confirmPassword: responseData.errors.confirmPassword || "",
@@ -61,7 +70,8 @@ export default function RegisterScreen() {
 
   const handleRegister = () => {
     setErrors({
-      username: "",
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -89,13 +99,22 @@ export default function RegisterScreen() {
       {/* Form input */}
       <View style={styles.form}>
         <TextInput
-          style={[styles.input, errors.username && styles.inputError]}
-          placeholder="Enter your.username"
+          style={[styles.input, errors.firstName && styles.inputError]}
+          placeholder="Enter your first name"
           placeholderTextColor="#999"
-          value={inputValue.username}
-          onChangeText={(text) => handleChange("username", text)}
+          value={inputValue.firstName}
+          onChangeText={(text) => handleChange("firstName", text)}
         />
-        {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+        {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+
+        <TextInput
+          style={[styles.input, errors.lastName && styles.inputError]}
+          placeholder="Enter your last name"
+          placeholderTextColor="#999"
+          value={inputValue.lastName}
+          onChangeText={(text) => handleChange("lastName", text)}
+        />
+        {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
 
         <TextInput
           style={[styles.input, errors.email && styles.inputError]}

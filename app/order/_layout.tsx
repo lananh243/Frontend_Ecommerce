@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import React from 'react'
 
-export default function CartLayout() {
+export default function OrderLayout() {
   return (
     <Stack
       screenOptions={{
@@ -10,9 +10,7 @@ export default function CartLayout() {
     >
       {/* Các màn hình con */}
       <Stack.Screen name="index" />
-      <Stack.Screen name="shipping" />
-      <Stack.Screen name="payment" />
-      <Stack.Screen name="order_completed" />
+      <Stack.Screen name="[id]" />
     </Stack>
   );
 }

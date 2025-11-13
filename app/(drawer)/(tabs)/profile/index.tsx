@@ -1,16 +1,69 @@
-import React from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
-import { Ionicons, Feather, MaterialIcons, FontAwesome5, Entypo } from "@expo/vector-icons";
+import React, { useEffect } from "react";
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { Ionicons, Feather } from "@expo/vector-icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProfile } from "@/services/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Gọi API qua TanStack Query
+  const { data: user, isLoading, isError, refetch } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+    refetchOnMount: true,
+  });
+
   const menuItems = [
-    { icon: "location-outline", text: "Address" },
-    { icon: "card-outline", text: "Payment method" },
-    { icon: "gift-outline", text: "Voucher" },
-    { icon: "heart-outline", text: "My Wishlist" },
-    { icon: "star-outline", text: "Rate this app" },
+    { icon: "id-card-outline", text: "Information", route: "/profile/update_profile" },
+    { icon: "heart-outline", text: "My Wishlist", route: "/wishlist" },
     { icon: "log-out-outline", text: "Log out" },
   ];
+
+  // Logout
+  const handleLogout = async () => {
+    Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất không?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.removeItem("userToken");
+            await AsyncStorage.removeItem("userInfo");
+
+            queryClient.clear();
+
+            router.push("/account/login");
+          } catch (err) {
+            console.error("Lỗi khi đăng xuất:", err);
+          }
+        },
+      },
+    ]);
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  if (isError || !user) {
+    return (
+      <View style={styles.center}>
+        <Text>Không thể tải thông tin người dùng </Text>
+        <TouchableOpacity onPress={() => refetch()}>
+          <Text style={{ color: "blue", marginTop: 10 }}>Thử lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -18,13 +71,15 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Image
           source={{
-            uri: "https://i.pravatar.cc/150?img=47",
+            uri: user.avatarUrl || "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
           }}
           style={styles.avatar}
         />
         <View style={styles.info}>
-          <Text style={styles.name}>Sunie Pham</Text>
-          <Text style={styles.email}>sunieux@gmail.com</Text>
+          <Text style={styles.name}>
+            {user.firstName || ""} {user.lastName || ""}
+          </Text>
+          <Text style={styles.email}>{user.email}</Text>
         </View>
         <TouchableOpacity style={styles.settingsButton}>
           <Ionicons name="settings-outline" size={22} color="black" />
@@ -34,7 +89,17 @@ export default function ProfileScreen() {
       {/* Menu List */}
       <View style={styles.card}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={() => {
+              if (item.text === "Log out") {
+                handleLogout();
+              } else if (item.route) {
+                router.push(item.route as any);
+              }
+            }}
+          >
             <View style={styles.menuLeft}>
               <Ionicons name={item.icon as any} size={22} color="#8a8a8a" />
               <Text style={styles.menuText}>{item.text}</Text>
@@ -53,6 +118,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     paddingVertical: 50,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
     width: "85%",

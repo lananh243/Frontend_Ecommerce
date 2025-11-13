@@ -10,15 +10,9 @@ import BannerCarousel from "@/components/BannerCarousel";
 import { getAllProduct } from "@/services/product";
 import { useQuery } from "@tanstack/react-query";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
-import { DrawerNavigationProp } from "@react-navigation/drawer";
-
-type RootDrawerParamList = {
-  Homepage: undefined;
-  Discover: undefined;
-};
 
 const HomeScreen = () => {
-  const navigation = useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
+  const navigation = useNavigation();
 
   const { data: products, isLoading, isError } = useQuery({
     queryKey: ["products"],
@@ -56,21 +50,21 @@ const HomeScreen = () => {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* 🔹 Categories */}
-        <CategorySection />
+        {/* <CategorySection /> */}
 
         {/* 🔹 Banner chính */}
         <BannerCarousel
           data={[
             {
               id: "1",
-              uri: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=800&q=80",
+              uri: "https://lh3.googleusercontent.com/G7Ll7lOnBLcw9KzowNZuExtuyKDZh27SPa9yOW4xPUfbAfI4P6K7M_17fnHnAoeMLF4m62j-LeiGAhSW3AN5R_TPqXde3gea_gnLXLZXxq2Pehw1C5HnzTMLPx4KNiEWuPm9aoMbew=w1000-h937-no",
               subtitle: "Autumn Collection",
               titleLines: ["Autumn", "Collection", "2021"],
               layout: "full",
             },
             {
               id: "2",
-              uri: "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?w=800&q=80",
+              uri: "https://sieuthigiake.com/img/trung-bay-trong-cua-hang-quan-ao-cong-so.jpg",
               subtitle: "Summer Collection",
               titleLines: ["Be Cool", "Be Stylish"],
               layout: "full",
@@ -96,22 +90,7 @@ const HomeScreen = () => {
           title="Recommended"
           horizontal={true}
           cardStyle="compact"
-          data={[
-            {
-              productId: "1",
-              productName: "White fashion hoodie",
-              price: "$29.00",
-              imageUrl:
-                "https://bizweb.dktcdn.net/100/393/859/products/vn-11134211-7ras8-m0uy3sl4sulpd3-1728395366120.jpg?v=1728395485583",
-            },
-            {
-              productId: "2",
-              productName: "Cotton Shirt",
-              price: "$30.00",
-              imageUrl:
-                "https://down-vn.img.susercontent.com/file/vn-11134211-7ras8-m0uy3sl4vnql0d",
-            },
-          ]}
+          data={products?.data}
         />
 
         {/* 🔹 Top Collection */}

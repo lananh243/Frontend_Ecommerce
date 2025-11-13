@@ -13,7 +13,7 @@ export const registerUser = async (data: RegisterRequest) => {
 
 export const loginUser = async (data: LoginRequest) => {
     try {
-      const response = await axiosInstance.post("/auths/login", data);
+      const response = await axiosInstance.post("/auths/login", data);      
       return response.data;
     } catch (error) {
       throw error;
@@ -24,3 +24,18 @@ export const getAllUsers = async () => {
     const response = await axiosInstance.get("/users");
     return response.data;
 }
+
+// api/auth.ts
+export const getProfile = async () => {
+  const response = await axiosInstance.get("/auths/profile");
+  return response.data.data;
+};
+
+export const updateProfile = async (formData: FormData) => {
+  const response = await axiosInstance.put("/auths/profile", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};

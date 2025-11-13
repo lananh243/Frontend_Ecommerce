@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import React from 'react'
 
-export default function ProfileLayout() {
+export default function OrderLayout() {
   return (
     <Stack
       screenOptions={{
@@ -10,7 +10,6 @@ export default function ProfileLayout() {
     >
       {/* Các màn hình con */}
       <Stack.Screen name="index" />
-      <Stack.Screen name="update_profile"/>
     </Stack>
   );
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,31 +13,35 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { searchProductName } from "@/services/product";
-
-// ⭐ Component hiển thị 5 ngôi sao đánh giá
-const RatingStars = ({ rating = 4 }: { rating?: number }) => {
-  const stars = [];
-  for (let i = 1; i <= 5; i++) {
-    stars.push(
-      <Ionicons
-        key={i}
-        name={rating >= i ? "star" : rating >= i - 0.5 ? "star-half" : "star-outline"}
-        size={14}
-        color="#f5c518"
-      />
-    );
-  }
-  return <View style={{ flexDirection: "row" }}>{stars}</View>;
-};
+import { useWishlist } from "@/app/hooks/useWishlist";
 
 const FilterProductScreen = () => {
+  const { wishlist, addToWishlist, removeFromWishlist, isAdding } = useWishlist();
   const { q } = useLocalSearchParams<{ q?: string }>();
 
+  // 🔍 Lấy danh sách sản phẩm theo tên
   const { data, isLoading, isError } = useQuery({
     queryKey: ["searchProduct", q],
     queryFn: () => searchProductName(q ?? ""),
     enabled: !!q,
   });
+
+  const products = data?.data || [];
+
+  // 🧠 Hàm kiểm tra sản phẩm đã có trong wishlist hay chưa
+  const checkWishlisted = (productId: number) => {
+    return wishlist?.some((item: any) => item.productId === productId);
+  };
+
+  // 🧩 Toggle wishlist cho từng sản phẩm
+  const toggleWishlist = (productId: number) => {
+    const exists = checkWishlisted(productId);
+    if (exists) {
+      removeFromWishlist(productId);
+    } else {
+      addToWishlist(productId);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,12 +57,8 @@ const FilterProductScreen = () => {
       <View style={styles.filter}>
         <View>
           <Text style={styles.foundText}>Found</Text>
-          <Text style={styles.resultText}>{data?.data.length} Results</Text>
+          <Text style={styles.resultText}>{products.length} Results</Text>
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterText}>Filter</Text>
-          <Ionicons name="chevron-down" size={14} color="#333" />
-        </TouchableOpacity>
       </View>
 
       {/* Loading */}
@@ -75,10 +75,10 @@ const FilterProductScreen = () => {
         </View>
       )}
 
-      {/* List sản phẩm */}
+      {/* Danh sách sản phẩm */}
       {!isLoading && !isError && (
         <FlatList
-          data={data?.data || []}
+          data={products}
           keyExtractor={(item) => item.productId.toString()}
           numColumns={2}
           showsVerticalScrollIndicator={false}
@@ -89,32 +89,38 @@ const FilterProductScreen = () => {
               <Text style={styles.notFound}>Không tìm thấy sản phẩm</Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <TouchableOpacity
-                style={styles.imageContainer}
-                onPress={() => router.push(`/search/${item.productId}`)}
-              >
-                <Image source={{ uri: item.imageUrl }} style={styles.image} />
-                <TouchableOpacity style={styles.heartButton}>
-                  <Ionicons name="heart-outline" size={18} color="#f06292" />
+          renderItem={({ item }) => {
+            const isWishlisted = checkWishlisted(item.productId);
+            return (
+              <View style={styles.card}>
+                <TouchableOpacity
+                  style={styles.imageContainer}
+                  onPress={() => router.push(`/search/${item.productId}`)}
+                >
+                  <Image source={{ uri: item.imageUrl }} style={styles.image} />
+                  <TouchableOpacity
+                    style={styles.heartButton}
+                    onPress={() => toggleWishlist(item.productId)}
+                    disabled={isAdding}
+                  >
+                    <Ionicons
+                      name={isWishlisted ? "heart" : "heart-outline"}
+                      size={18}
+                      color={isWishlisted ? "red" : "gray"}
+                    />
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </TouchableOpacity>
 
-              <Text style={styles.productName}>{item.productName}</Text>
+                <Text style={styles.productName}>{item.productName}</Text>
 
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>
-                  {item.price.toLocaleString("vi-VN")} ₫
-                </Text>
+                <View style={styles.priceRow}>
+                  <Text style={styles.price}>
+                    {item.price.toLocaleString("vi-VN")} ₫
+                  </Text>
+                </View>
               </View>
-
-              <View style={styles.ratingRow}>
-                <RatingStars rating={4.5} />
-                <Text style={styles.ratingText}>({item.stockQuantity})</Text>
-              </View>
-            </View>
-          )}
+            );
+          }}
         />
       )}
     </SafeAreaView>
@@ -146,21 +152,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
-  },
-  filterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    paddingVertical: 6,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderRadius: 16,
-    borderColor: "#ccc",
-  },
-  filterText: {
-    fontSize: 13,
-    marginRight: 4,
-    color: "#333",
   },
   foundText: {
     color: "#777",
@@ -209,16 +200,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#000",
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  ratingText: {
-    fontSize: 12,
-    color: "#666",
-    marginLeft: 4,
   },
   notFound: {
     fontSize: 16,
